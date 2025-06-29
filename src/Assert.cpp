@@ -13,7 +13,7 @@ namespace Bungee::Assert {
 #	ifndef BUNGEE_ASSERT_FAIL_EXTERNAL
 void fail(int level, const char *message, const char *file, int line)
 {
-	fprintf(stderr, "Failed: BUNGEE_ASSERT %d(%s)  at (%s: %d)\n", level, message, file, line);
+	fprintf(stderr, "Failed: BUNGEE_ASSERT%d(%s)  at (%s: %d)\n", level, message, file, line);
 	std::abort();
 }
 #	endif

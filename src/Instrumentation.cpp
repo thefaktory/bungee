@@ -8,7 +8,7 @@
 #elif defined(__APPLE__)
 #	include <os/log.h>
 #else
-#	include <iostream>
+#	include <cstdio>
 #endif
 
 #include <cstdarg>
