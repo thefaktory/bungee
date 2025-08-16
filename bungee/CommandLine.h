@@ -7,6 +7,7 @@
 #include "cxxopts.hpp"
 #undef CXXOPTS_NO_EXCEPTIONS
 
+#include <bit>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -15,6 +16,7 @@
 #include <iostream>
 #include <span>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace Bungee::CommandLine {
@@ -140,6 +142,7 @@ struct Processor
 	SampleRates sampleRates;
 	int inputFrameCount;
 	int inputChannelStride;
+	int sampleFormat;
 	int channelCount;
 	int bitsPerSample;
 	std::vector<float> inputBuffer;
@@ -186,6 +189,7 @@ struct Processor
 				if (sampleRates.output < 8000 || sampleRates.output > 192000)
 					fail("Output sample rate must be in the range [8000, 192000] kHz");
 
+				sampleFormat = read<uint16_t>(&wavHeader[20]);
 				channelCount = read<uint16_t>(&wavHeader[22]);
 				bitsPerSample = read<uint16_t>(&wavHeader[34]);
 				if (!channelCount)
@@ -205,20 +209,14 @@ struct Processor
 		inputChannelStride = inputFrameCount;
 		inputBuffer.resize(channelCount * inputChannelStride);
 
-		if (bitsPerSample == 16)
-		{
-			for (int i = 0; i < inputFrameCount; ++i)
-				for (int c = 0; c < channelCount; ++c)
-					inputBuffer[c * inputChannelStride + i] = toFloat(read<int16_t>(&wavData[(i * channelCount + c) * sizeof(int16_t)]));
-		}
-		else if (bitsPerSample == 32)
-		{
-			for (int i = 0; i < inputFrameCount; ++i)
-				for (int c = 0; c < channelCount; ++c)
-					inputBuffer[c * inputChannelStride + i] = toFloat(read<int32_t>(&wavData[(i * channelCount + c) * sizeof(int32_t)]));
-		}
+		if (sampleFormat == 1 && bitsPerSample == 16)
+			readInputAudio<int16_t>();
+		else if (sampleFormat == 1 && bitsPerSample == 32)
+			readInputAudio<int32_t>();
+		else if (sampleFormat == 3 && bitsPerSample == 32)
+			readInputAudio<float>();
 		else
-			fail("Please check your input file: only 16-bit and 32-bit PCM are supported");
+			fail("Please check your input file: its sample format is not supported");
 
 		std::fill(wavData.begin(), wavData.end(), 0);
 
@@ -299,6 +297,8 @@ struct Processor
 
 	bool writeChunk(Bungee::OutputChunk chunk)
 	{
+		if (sampleFormat == 3)
+			return writeSamples<float>(chunk);
 		if (bitsPerSample == 32)
 			return writeSamples<int32_t>(chunk);
 		else
@@ -316,25 +316,43 @@ struct Processor
 		outputFile.write(wavData.data(), wavData.size());
 	}
 
+	template <typename Sample>
+	void readInputAudio()
+	{
+		for (int i = 0; i < inputFrameCount; ++i)
+			for (int c = 0; c < channelCount; ++c)
+				inputBuffer[c * inputChannelStride + i] = toFloat(read<Sample>(&wavData[(i * channelCount + c) * sizeof(Sample)]));
+	}
+
 	template <typename Type>
 	static inline Type read(const char *data)
 	{
-		Type value = 0;
-		for (unsigned i = 0; i < sizeof(Type); ++i)
-			value |= (Type(data[i]) & 0xff) << 8 * i;
-		return value;
+		if constexpr (std::is_same_v<Type, float>)
+			return std::bit_cast<float>(read<uint32_t>(data));
+		else
+		{
+			Type value = 0;
+			for (unsigned i = 0; i < sizeof(Type); ++i)
+				value |= (Type(data[i]) & 0xff) << 8 * i;
+			return value;
+		}
 	}
 
 	template <typename Type>
 	static inline void write(char *data, Type value)
 	{
-		for (unsigned i = 0; i < sizeof(Type); ++i)
-			data[i] = value >> 8 * i;
+		if constexpr (std::is_same_v<Type, float>)
+			write(data, std::bit_cast<uint32_t>(value));
+		else
+			for (unsigned i = 0; i < sizeof(Type); ++i)
+				data[i] = value >> 8 * i;
 	}
 
 	template <typename Sample>
 	static inline float toFloat(Sample x)
 	{
+		if (std::is_same_v<Sample, float>)
+			return x;
 		constexpr float k = -1.f / std::numeric_limits<Sample>::min();
 		return k * x;
 	}
@@ -342,6 +360,8 @@ struct Processor
 	template <typename Sample>
 	static inline Sample fromFloat(float x)
 	{
+		if constexpr (std::is_same_v<Sample, float>)
+			return x;
 		x = std::ldexp(x, 8 * sizeof(Sample) - 1);
 		x = std::round(x);
 		if (x < std::numeric_limits<Sample>::min())
