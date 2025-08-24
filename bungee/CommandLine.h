@@ -224,8 +224,21 @@ struct Processor
 		if (!outputFile)
 			fail("Please check your output path: there was a problem opening the output file");
 
-		const auto nOutput = int(inputFrameCount / std::max(.01, fabs(request.speed)) * sampleRates.output / sampleRates.input);
-		wavData.resize(nOutput * channelCount * bitsPerSample / 8);
+		{
+			constexpr size_t maximumOutputDataBytes = 1ll << 30; // 1G
+			const size_t bytesPerFrame = channelCount * bitsPerSample / 8;
+			const size_t maximumOutputFrameCount = maximumOutputDataBytes / bytesPerFrame;
+
+			size_t outputFrameCount = std::floor(inputFrameCount / std::fabs(request.speed) * sampleRates.output / sampleRates.input);
+			if (outputFrameCount > maximumOutputFrameCount)
+			{
+				outputFrameCount = maximumOutputFrameCount;
+				std::cerr << "Warning: output audio will be truncated to 1GB\n";
+			}
+
+			const size_t wavDataBytes = outputFrameCount * bytesPerFrame;
+			wavData.resize(wavDataBytes);
+		}
 
 		restart(request);
 	}
