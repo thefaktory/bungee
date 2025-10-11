@@ -36,7 +36,7 @@ int Timing::maxOutputFrameCount(bool mayUpsampleOutput) const
 
 double Timing::calculateInputHop(const Request &request) const
 {
-	const double unitHop = (1 << log2SynthesisHop) * Resample::Operations().setup(sampleRates, request.pitch);
+	const double unitHop = (1 << log2SynthesisHop) * Resample::Operations().setup(sampleRates, request.pitch, request.resampleMode);
 	return unitHop * request.speed;
 }
 

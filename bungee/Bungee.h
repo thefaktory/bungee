@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "Modes.h"
+
 #ifndef BUNGEE_VISIBILITY
 #	define BUNGEE_VISIBILITY
 #endif
@@ -36,9 +38,12 @@ struct Request
 
 	// Set to have the stretcher forget all previous grains and restart on this grain.
 	bool reset;
+
+	// How resampling should be applied to this grain.
+	enum ResampleMode resampleMode;
 };
 
-// Information to describe a chunk of  audio that the audio stretcher requires as input for the current grain.
+// Information to describe a chunk of audio that the audio stretcher requires as input for the current grain.
 // Note that input chunks of consecutive grains often overlap and are usually centred on the grain's
 // Request::position.
 struct InputChunk

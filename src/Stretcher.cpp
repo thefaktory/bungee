@@ -55,7 +55,7 @@ void Internal::Stretcher::analyseGrain(const float *data, std::ptrdiff_t stride,
 	{
 		auto m = grain.inputChunkMap(data, stride, muteFrameCountHead, muteFrameCountTail, previous, *this);
 
-		auto ref = grain.resampleInput(m, 8 << log2SynthesisHop, muteFrameCountHead, muteFrameCountTail);
+		auto ref = grain.resampleInput(m, log2SynthesisHop + 3, muteFrameCountHead, muteFrameCountTail);
 
 		auto log2TransformLength = input.applyAnalysisWindow(ref, muteFrameCountHead, muteFrameCountTail);
 

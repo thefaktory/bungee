@@ -22,7 +22,7 @@ struct Output
 	Eigen::ArrayXf synthesisWindow;
 	Eigen::ArrayXXf inverseTransformed;
 	Eigen::ArrayXXf bufferResampled;
-	float resampleOffset = 0.f;
+	double resampleOffset = 0.;
 	Window::DispatchApply dispatchApply;
 
 	Output(Fourier::Transforms &transforms, int log2SynthesisHop, int channelCount, int maxOutputChunkSize, float windowGain, std::initializer_list<float> windowCoefficients);
@@ -31,13 +31,13 @@ struct Output
 
 	struct Segment
 	{
-		Resample::Padded bufferLapped;
+		Resample::Internal bufferLapped;
 		bool needsResample;
 
 		Segment(int log2FrameCount, int channelCount);
 		static inline OutputChunk outputChunk(Eigen::Ref<Eigen::ArrayXXf> ref, bool allZeros);
 		static void lapPadding(Segment &current, Segment &next);
-		OutputChunk resample(float &resampleOffset, Resample::Operation resampleOperationBegin, Resample::Operation resampleOperationEnd, Eigen::Ref<Eigen::ArrayXXf> bufferResampled);
+		OutputChunk resample(double &resampleOffset, Resample::Operation resampleOperationBegin, Resample::Operation resampleOperationEnd, Eigen::Ref<Eigen::ArrayXXf> bufferResampled);
 	};
 };
 

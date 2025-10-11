@@ -34,7 +34,7 @@ InputChunk Grain::specify(const Request &r, Grain &previous, SampleRates sampleR
 	BUNGEE_ASSERT1(request.pitch > 0.);
 
 	const Assert::FloatingPointExceptions floatingPointExceptions(FE_INEXACT);
-	const auto unitHop = (1 << log2SynthesisHop) * resampleOperations.setup(sampleRates, request.pitch);
+	const auto unitHop = (1 << log2SynthesisHop) * resampleOperations.setup(sampleRates, request.pitch, request.resampleMode);
 
 	requestHop = request.position - previous.request.position;
 
@@ -77,7 +77,7 @@ InputChunk Grain::specify(const Request &r, Grain &previous, SampleRates sampleR
 	{
 		int halfInputFrameCount = inputResampled.frameCount / 2;
 		if (resampleOperations.input.ratio != 1.f)
-			halfInputFrameCount = int(std::round(halfInputFrameCount / resampleOperations.input.ratio)) + 1;
+			halfInputFrameCount = int(std::ceil(halfInputFrameCount / resampleOperations.input.ratio)) + 2;
 
 		inputChunk.begin = -halfInputFrameCount;
 		inputChunk.end = +halfInputFrameCount;
@@ -88,6 +88,7 @@ InputChunk Grain::specify(const Request &r, Grain &previous, SampleRates sampleR
 		const int offset = int(std::round(request.position - bufferStartPosition));
 		inputChunk.begin += offset;
 		inputChunk.end += offset;
+		inputPosition = bufferStartPosition + offset;
 		return inputChunk;
 	}
 }
@@ -136,12 +137,15 @@ Eigen::Ref<Eigen::ArrayXXf> Grain::resampleInput(Eigen::Ref<Eigen::ArrayXXf> inp
 {
 	if (resampleOperations.input.function)
 	{
-		float offset = float(inputChunk.begin - request.position);
-		offset *= resampleOperations.input.ratio;
-		offset += 1 << (log2WindowLength - 1);
-		offset -= analysis.positionError;
+		BUNGEE_ASSERT1(input.rows() % 2 == 0);
 
-		resampleOperations.input.function(inputResampled, offset, input, resampleOperations.input.ratio, resampleOperations.input.ratio, false, muteFrameCountHead, muteFrameCountTail);
+		inputResampled.offset = inputPosition - request.position - input.rows() / 2;
+		inputResampled.offset *= resampleOperations.input.ratio;
+		inputResampled.offset += 1 << (log2WindowLength - 1);
+		inputResampled.offset -= analysis.positionError;
+
+		Resample::External external(input, muteFrameCountHead, muteFrameCountTail);
+		resampleOperations.input.function(inputResampled, external, resampleOperations.input.ratio, resampleOperations.input.ratio, false);
 
 		muteFrameCountHead = muteFrameCountTail = 0;
 

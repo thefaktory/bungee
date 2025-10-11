@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "Assert.h"
 #include "Fourier.h"
 #include "Instrumentation.h"
 #include "Output.h"
@@ -11,7 +12,6 @@
 #include "Stretch.h"
 #include "Window.h"
 
-#include "bungee/../src/log2.h"
 #include "bungee/Bungee.h"
 
 #include <Eigen/Core>
@@ -45,6 +45,7 @@ struct Grain
 
 	Resample::Operations resampleOperations{};
 
+	double inputPosition;
 	InputChunk inputChunk{};
 	Analysis analysis{};
 
@@ -54,7 +55,7 @@ struct Grain
 	Eigen::ArrayX<Phase::Type> rotation;
 	Eigen::ArrayX<Phase::Type> delta;
 	std::vector<Partials::Partial> partials;
-	Resample::Padded inputResampled;
+	Resample::Internal inputResampled;
 	Eigen::ArrayXXf inputCopy;
 
 	Output::Segment segment;
@@ -97,6 +98,7 @@ struct Grain
 		if (instrumentation.enabled || Bungee::Assert::level)
 			overlapCheck(m, muteFrameCountHead, muteFrameCountTail, previous, instrumentation);
 
+		BUNGEE_ASSERT1(m.rows() % 2 == 0);
 		return m;
 	}
 

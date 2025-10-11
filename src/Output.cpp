@@ -59,7 +59,7 @@ Output::Segment::Segment(int log2FrameCount, int channelCount) :
 
 void Output::Segment::lapPadding(Segment &current, Segment &next)
 {
-	constexpr auto n = Resample::Padded::padding;
+	constexpr auto n = Resample::Internal::padding;
 
 	if (current.needsResample)
 	{
@@ -90,29 +90,34 @@ inline OutputChunk Output::Segment::outputChunk(Eigen::Ref<Eigen::ArrayXXf> ref,
 	return outputChunk;
 }
 
-OutputChunk Output::Segment::resample(float &resampleOffset, Resample::Operation resampleOperationBegin, Resample::Operation resampleOperationEnd, Eigen::Ref<Eigen::ArrayXXf> bufferResampled)
+OutputChunk Output::Segment::resample(double &resampleOffset, Resample::Operation resampleOperationBegin, Resample::Operation resampleOperationEnd, Eigen::Ref<Eigen::ArrayXXf> bufferResampled)
 {
-	if (!resampleOperationBegin.function)
-		resampleOperationBegin.ratio = 1.f;
-
 	if (!resampleOperationEnd.function)
 	{
 		resampleOperationEnd.ratio = 1.f;
 		resampleOperationEnd.function = resampleOperationBegin.function;
 	}
 
+	if (!resampleOperationBegin.function)
+		resampleOperationBegin.ratio = resampleOperationEnd.ratio;
+
 	BUNGEE_ASSERT1(resampleOperationBegin.ratio != 0.f);
 	BUNGEE_ASSERT1(resampleOperationEnd.ratio != 0.f);
 
 	if (resampleOperationEnd.function)
 	{
-		if (bufferLapped.allZeros)
-			resampleOperationEnd.function = &Resample::resample<Resample::FixedToVariable, Resample::None>;
+		bufferLapped.offset = resampleOffset;
 
-		const bool alignEnd = resampleOperationEnd.ratio == 1.f;
-		const auto frameCount = resampleOperationEnd.function(bufferLapped, resampleOffset, bufferResampled, resampleOperationBegin.ratio, resampleOperationEnd.ratio, alignEnd, 0, 0);
+		const auto muteHead = bufferLapped.allZeros ? bufferResampled.rows() : 0;
+		Resample::External external(bufferResampled, muteHead, 0);
 
-		return outputChunk(bufferResampled.topRows(frameCount), bufferLapped.allZeros);
+		const bool alignEnd = resampleOperationEnd.ratio == 1.;
+
+		resampleOperationEnd.function(bufferLapped, external, resampleOperationBegin.ratio, resampleOperationEnd.ratio, alignEnd);
+
+		resampleOffset = bufferLapped.offset;
+
+		return outputChunk(bufferResampled.topRows(external.activeFrameCount), bufferLapped.allZeros);
 	}
 	else
 	{

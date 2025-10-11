@@ -46,7 +46,28 @@ struct Options :
 			("s,speed", "output speed as multiple of input speed", cxxopts::value<double>()->default_value("1")) //
 			("p,pitch", "output pitch shift in semitones", cxxopts::value<double>()->default_value("0")) //
 			;
-		add_options("Developer / Debug") //
+		auto optionAdder = add_options(helpGroups.emplace_back("Processing"));
+
+#define X_BEGIN(Type, type) \
+		{ \
+			std::string names, d, a = "[";
+#define X_END(Type, type) \
+			optionAdder(#type, names + "]", cxxopts::value<std::string>()->default_value(d)); \
+		}
+#define X_ITEM(Type, type, mode, description) \
+		names += a + #mode; \
+		a = "|"; \
+		if (Request{}.type##Mode == type##Mode_##mode) \
+			d = #mode;
+
+		BUNGEE_MODES
+
+#undef X_BEGIN
+#undef X_END
+#undef X_ITEM
+			//
+			;
+		add_options(helpGroups.emplace_back("Developer")) //
 			("grain", "increases [+1] or decreases [-1] grain duration by a factor of two", cxxopts::value<int>()->default_value("0")) //
 			("push", "input chunk size (0 for pull operation, negative for random push chunk size)", cxxopts::value<int>()->default_value("0")) //
 			("instrumentation", "report useful diagnostic information to system log") //
@@ -95,6 +116,32 @@ struct Parameters :
 
 		if ((*this)["push"].as<int>() && request.speed < 0.)
 			fail("speed not greater than zero in 'push' mode");
+
+#define X_BEGIN(Type, type) \
+		{ \
+			const auto s = (*this)[#type].as<std::string>(); \
+			if (false) \
+			{ \
+			}
+
+#define X_ITEM(Type, type, mode, description) \
+			else if (s == #mode) \
+			{ \
+				request.type##Mode = type##Mode_##mode; \
+			}
+
+#define X_END(Type, type) \
+			else \
+			{ \
+				Bungee::CommandLine::fail("Unrecognised value for --" #type); \
+			} \
+		}
+
+		BUNGEE_MODES
+
+#undef X_BEGIN
+#undef X_ITEM
+#undef X_END
 	}
 };
 
