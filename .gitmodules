@@ -6,3 +6,6 @@
 	path = submodules/cxxopts
 	url = https://github.com/jarro2783/cxxopts.git
 	shallow = true
+[submodule "submodules/pffft"]
+	path = submodules/pffft
+	url = https://github.com/marton78/pffft
