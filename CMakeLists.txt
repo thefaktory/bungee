@@ -56,6 +56,7 @@ set_target_properties(bungee_executable PROPERTIES
 # PFFFT as a static library
 add_library(pffft EXCLUDE_FROM_ALL STATIC
   submodules/pffft/pffft.c
+  submodules/pffft/pffft_common.c
   submodules/pffft/fftpack.c
 )
 target_compile_options(pffft PRIVATE -ffast-math -fno-finite-math-only -fno-exceptions)
