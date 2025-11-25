@@ -81,6 +81,11 @@ class Stream
 			return end;
 		}
 
+		auto beginPosition() const
+		{
+			return begin;
+		}
+
 		void analyseGrain() const
 		{
 			const int muteHead = begin - inputChunk.begin;
@@ -190,8 +195,8 @@ public:
 
 	float occupancy() const
 	{
-		int absEnd = abs(inputBuffer.end);
-		int absBegin = abs(inputBuffer.begin);
+		int absEnd = abs(inputBuffer.endPosition());
+		int absBegin = abs(inputBuffer.beginPosition());
 		if (absEnd > absBegin)
 			return static_cast<float>(absEnd) / static_cast<float>(std::numeric_limits<int>::max());
 		else
