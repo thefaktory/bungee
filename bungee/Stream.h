@@ -88,6 +88,16 @@ class Stream
 			assert(muteHead >= (inputChunk.end - inputChunk.begin) || muteTail <= 0);
 			stretcher.analyseGrain(buffer.data() - muteHead, channelStride, muteHead, muteTail);
 		}
+
+		float occupancy() const
+		{
+			int absEnd = abs(end);
+			int absBegin = abs(begin);
+			if (absEnd > absBegin)
+				return static_cast<float>(absEnd) / static_cast<float>(std::numeric_limits<int>::max());
+			else
+				return static_cast<float>(absBegin) / static_cast<float>(std::numeric_limits<int>::max());
+		}
 	};
 
 	const int channelCount;
