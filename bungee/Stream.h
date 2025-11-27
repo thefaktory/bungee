@@ -22,8 +22,8 @@ class Stream
 		const int channelStride;
 		const int channelCount;
 		std::vector<float> buffer;
-		int begin = 0;
-		int end = 0;
+		long long begin = 0;
+		long long end = 0;
 
 	public:
 		Stretcher<Implementation> &stretcher;
@@ -55,7 +55,7 @@ class Stream
 			}
 			else
 			{
-				discard = std::min(inputChunk.begin - begin, inputSampleCount);
+				discard = std::min(inputChunk.begin - begin, static_cast<long long>(inputSampleCount));
 				begin = end;
 			}
 
@@ -193,15 +193,6 @@ public:
 		return inputPosition() - outputPosition();
 	}
 
-	float occupancy() const
-	{
-		int absEnd = abs(inputBuffer.endPosition());
-		int absBegin = abs(inputBuffer.beginPosition());
-		if (absEnd > absBegin)
-			return static_cast<float>(absEnd) / static_cast<float>(std::numeric_limits<int>::max());
-		else
-			return static_cast<float>(absBegin) / static_cast<float>(std::numeric_limits<int>::max());
-	}
 };
 
 } // namespace Bungee
